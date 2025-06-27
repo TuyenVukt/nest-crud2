@@ -7,9 +7,13 @@ import {
   HttpStatus,
   Post,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
   // SerializeOptions,
   // UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import {
   LoginDto,
@@ -22,6 +26,7 @@ import {
   RegisterResDto,
 } from './dto/register.dto';
 import { AccessTokenGuard } from 'src/shared/guards/access-token.guard';
+import { ActiveUser } from 'src/shared/decorators/active-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -43,6 +48,7 @@ export class AuthController {
   async login(@Body() body: LoginDto) {
     return new LoginResDto(await this.authService.login(body));
   }
+
   @UseGuards(AccessTokenGuard)
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
@@ -55,5 +61,19 @@ export class AuthController {
   @Post('logout')
   async logout(@Body() body: LogoutDto) {
     return new LogoutResDto(await this.authService.logout(body.refreshToken));
+  }
+
+  @Post('upload-avatar')
+  @UseGuards(AccessTokenGuard)
+  @UseInterceptors(FileInterceptor('avatar'))
+  async uploadAvatar(
+    @UploadedFile() file: Express.Multer.File,
+    @ActiveUser('userId') userId: number,
+  ) {
+    if (!file) {
+      throw new BadRequestException('Avatar image is required');
+    }
+
+    return await this.authService.uploadAvatar(userId, file);
   }
 }

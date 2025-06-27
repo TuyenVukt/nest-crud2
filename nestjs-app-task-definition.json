@@ -1,0 +1,145 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-northeast-1:690353060208:task-definition/nest-crud-definition:13",
+    "containerDefinitions": [
+        {
+            "name": "v1",
+            "image": "690353060208.dkr.ecr.ap-northeast-1.amazonaws.com/nest/crud",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "3000-ct-port",
+                    "containerPort": 3000,
+                    "hostPort": 3000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "ap-northeast-1"
+                },
+                {
+                    "name": "ACCESS_TOKEN_EXPIRES_IN",
+                    "value": "1h"
+                },
+                {
+                    "name": "REFRESH_TOKEN_EXPIRES_IN",
+                    "value": "1d"
+                },
+                {
+                    "name": "JWT_SECRET",
+                    "value": "your_jwt_secret_key"
+                },
+                {
+                    "name": "AWS_S3_BUCKET_NAME",
+                    "value": "update-images-demo-bucket"
+                },
+                {
+                    "name": "SECRET_API_KEY",
+                    "value": "1234567890"
+                },
+                {
+                    "name": "REFRESH_TOKEN_SECRET",
+                    "value": "ma_hoc_bi_mat"
+                },
+                {
+                    "name": "ACCESS_TOKEN_SECRET",
+                    "value": "ma_bi_mat"
+                },
+                {
+                    "name": "FRONTEND_URL",
+                    "value": "http://localhost:5173"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "secrets": [
+                {
+                    "name": "AWS_ACCESS_KEY_ID",
+                    "valueFrom": "arn:aws:ssm:ap-northeast-1:690353060208:parameter/crud_api/AWS_ACCESS_KEY_ID"
+                },
+                {
+                    "name": "AWS_SECRET_ACCESS_KEY",
+                    "valueFrom": "arn:aws:ssm:ap-northeast-1:690353060208:parameter/crud_api/AWS_SECRET_ACCESS_KEY"
+                },
+                {
+                    "name": "DATABASE_URL",
+                    "valueFrom": "arn:aws:ssm:ap-northeast-1:690353060208:parameter/crud_api/database_url"
+                }
+            ],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/nest-crud-definition",
+                    "mode": "non-blocking",
+                    "awslogs-create-group": "true",
+                    "max-buffer-size": "25m",
+                    "awslogs-region": "ap-northeast-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "nest-crud-definition",
+    "executionRoleArn": "arn:aws:iam::690353060208:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "revision": 13,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.28"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "ecs.capability.secrets.ssm.environment-variables"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "1024",
+    "memory": "3072",
+    "runtimePlatform": {
+        "cpuArchitecture": "ARM64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "registeredAt": "2025-06-27T16:50:48.546Z",
+    "registeredBy": "arn:aws:iam::690353060208:root",
+    "enableFaultInjection": false,
+    "tags": []
+}

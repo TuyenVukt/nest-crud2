@@ -1,37 +1,46 @@
-# we create a Docker image from source code
 version: '3.8'
-services:  
-  dev-database:
-    image: postgres:15.0
-    container_name: dev-database
+
+services:
+  postgres:
+    image: postgres:13
+    container_name: postgres_db
     ports:
-      - 5434:5432 #{port in host(myPC)} : {port in Container}
-    #environment variables, like: db's username, password...
+      - '5432:5432'
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Abc123456789
-      POSTGRES_DB: testdb
-    networks:
-      - nestjs-network
-  #Create another container for "TEST"
-  test-database:
-    image: postgres:15.0
-    container_name: test-database
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: blog-dev-db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nestjs_api
     ports:
-      - 5435:5432 #{port in host(myPC)} : {port in Container}
-    #environment variables, like: db's username, password...
+      - '3000:3000'
+      - '5555:5555'  # nếu bạn dùng Prisma studio
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.production
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: Abc123456789
-      POSTGRES_DB: testdb
-    networks:
-      - nestjs-network
-networks:
-  nestjs-network:
-#Create container,network,...from "docker composer" file:
-#-d: deamon/background mode
-#docker compose up -d 
-#if you want to start only specified services/container:
-#docker compose up -d dev-database -d
-#How to remove containers+volumes
-#docker compose rm dev-database --stop --force --volumes
+      NODE_ENV: production
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - uploads:/usr/src/app/uploads
+      - post_cover:/usr/src/app/post-cover
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/main.js"
+
+volumes:
+  postgres_data:
+  uploads:
+  post_cover:

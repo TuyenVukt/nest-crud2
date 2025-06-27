@@ -1,11 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import { S3Service } from 'src/shared/services/s3.service';
 import { CreatePostDto, UpdatePostDto } from './post.dto';
 import { isNotFoundPrismaError } from 'src/shared/helpers';
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  prismaService: any;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3Service: S3Service,
+  ) {}
 
   async getPosts() {
     return await this.prisma.post.findMany({
@@ -34,21 +44,63 @@ export class PostsService {
     });
   }
 
-  createPost(userId: number, body: CreatePostDto) {
-    return this.prisma.post.create({
-      data: {
-        title: body.title,
-        content: body.content,
-        authorId: userId,
-      },
-      include: {
-        author: {
-          omit: {
-            password: true,
+  async createPost(
+    userId: number,
+    body: CreatePostDto,
+    file?: Express.Multer.File,
+  ) {
+    try {
+      // 1️⃣ Tạo post trước (imageUrl để null hoặc rỗng)
+      const post = await this.prisma.post.create({
+        data: {
+          title: body.title,
+          content: body.content,
+          imageUrl: 'default', // Tạm chưa có ảnh
+          authorId: userId,
+        },
+        include: {
+          author: {
+            omit: {
+              password: true,
+            },
           },
         },
-      },
-    });
+      });
+      // 2️⃣ Nếu có ảnh → upload S3 → update post
+      if (file) {
+        const key = this.s3Service.generateKey(
+          file.originalname,
+          userId,
+          post.id,
+        );
+        const imageUrl = await this.s3Service.uploadFile(file, key);
+        const updatedImagePost = await this.prisma.post.update({
+          where: { id: post.id },
+          data: { imageUrl },
+          include: {
+            author: {
+              omit: {
+                password: true,
+              },
+            },
+          },
+        });
+        return updatedImagePost;
+      } else {
+        throw new BadRequestException('Image is required for post creation');
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      // Nếu đã tạo post nhưng upload ảnh lỗi → Xoá post
+      // if (post?.id && !post.imageUrl) {
+      //   try {
+      //     await this.prisma.post.delete({ where: { id: post.id } });
+      //   } catch (deleteError) {
+      //     console.error('Error cleaning up post after failed image upload:', deleteError);
+      //   }
+      // }
+      throw error;
+    }
   }
 
   async getPost(postId: number) {
@@ -78,13 +130,48 @@ export class PostsService {
     postId,
     userId,
     body,
+    file,
   }: {
     postId: number;
     userId: number;
     body: UpdatePostDto;
+    file?: Express.Multer.File;
   }) {
     try {
-      console.log('Goto update post', postId);
+      // Get existing post to check if it has an image
+      const existingPost = await this.prisma.post.findUnique({
+        where: {
+          id: postId,
+          authorId: userId,
+        },
+      });
+
+      if (!existingPost) {
+        throw new NotFoundException('Post not found');
+      }
+
+      let imageUrl = existingPost.imageUrl;
+
+      // If new image is provided, upload it and delete the old one
+      if (file) {
+        // Delete old image if it exists
+        if (existingPost.imageUrl) {
+          try {
+            await this.s3Service.deleteFileByUrl(existingPost.imageUrl);
+          } catch (error) {
+            console.error('Error deleting old image:', error);
+          }
+        }
+
+        // Upload new image
+        const key = this.s3Service.generateKey(
+          file.originalname,
+          userId,
+          postId,
+        );
+        imageUrl = await this.s3Service.uploadFile(file, key);
+      }
+
       const post = await this.prisma.post.update({
         where: {
           id: postId,
@@ -93,6 +180,7 @@ export class PostsService {
         data: {
           title: body.title,
           content: body.content,
+          imageUrl,
         },
         include: {
           author: {
@@ -114,13 +202,32 @@ export class PostsService {
 
   async deletePost({ postId, userId }: { postId: number; userId: number }) {
     try {
-      console.log('Goto delete post', postId, userId);
+      // Get post first (to check imageUrl)
+      const post = await this.prisma.post.findUnique({
+        where: {
+          id: postId,
+          authorId: userId,
+        },
+      });
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+      // Delete post first (main data)
       await this.prisma.post.delete({
         where: {
           id: postId,
           authorId: userId,
         },
       });
+      // Then delete image (if exists)
+      if (post.imageUrl) {
+        try {
+          await this.s3Service.deleteFileByUrl(post.imageUrl);
+        } catch (error) {
+          console.error('Error deleting image from S3:', error);
+          // Optionally: log để retry sau
+        }
+      }
       return true;
     } catch (error) {
       if (isNotFoundPrismaError(error)) {

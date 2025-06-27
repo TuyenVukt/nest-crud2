@@ -3,6 +3,7 @@ export class PostModel {
   title: string;
   authorId: number;
   content: string;
+  imageUrl: string;
   createdAt: Date;
   updatedAt: Date;
 

@@ -5,6 +5,7 @@ export class UserModel {
   email: string;
   name: string;
   @Exclude() password: string;
+  avatarUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 

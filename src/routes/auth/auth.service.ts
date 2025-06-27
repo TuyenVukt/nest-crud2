@@ -3,9 +3,11 @@ import {
   Injectable,
   InternalServerErrorException,
   UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { HashingService } from 'src/shared/services/hashing.service';
 import { PrismaService } from 'src/shared/services/prisma.service';
+import { S3Service } from 'src/shared/services/s3.service';
 import { LoginDto, RegisterDto } from './dto/register.dto';
 import { TokenService } from 'src/shared/services/token.service';
 import {
@@ -19,6 +21,7 @@ export class AuthService {
     private readonly hashingService: HashingService,
     private readonly prismaService: PrismaService,
     private readonly tokenService: TokenService,
+    private readonly s3Service: S3Service,
   ) {}
 
   async register(body: RegisterDto) {
@@ -29,6 +32,7 @@ export class AuthService {
           email: body.email,
           password: hashedPassword,
           name: body.name,
+          avatarUrl: 'default',
         },
         // select: {
         //   id: true,
@@ -141,6 +145,69 @@ export class AuthService {
         throw new UnauthorizedException('Refresh Token has been revolked');
       }
       throw new UnauthorizedException();
+    }
+  }
+
+  async uploadAvatar(userId: number, file: Express.Multer.File) {
+    try {
+      // Validate file type
+      if (!file.mimetype.startsWith('image/')) {
+        throw new BadRequestException('Uploaded file must be an image');
+      }
+
+      // Get existing user to check if they have an avatar
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!existingUser) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      let avatarUrl = existingUser.avatarUrl;
+
+      // If new avatar is provided, upload it and delete the old one
+      if (file) {
+        // Delete old avatar if it exists
+        if (existingUser.avatarUrl) {
+          try {
+            await this.s3Service.deleteFileByUrl(existingUser.avatarUrl);
+          } catch (deleteError: unknown) {
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+            console.error('Error deleting old avatar:', deleteError);
+          }
+        }
+
+        // Upload new avatar
+        const key = this.s3Service.generateAvatarKey(file.originalname, userId);
+        avatarUrl = await this.s3Service.uploadFile(file, key);
+      }
+
+      // Update user with new avatar URL
+      const updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: { avatarUrl },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return updatedUser;
+    } catch (uploadError: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      console.error('Error uploading avatar:', uploadError);
+      if (
+        uploadError instanceof BadRequestException ||
+        uploadError instanceof UnauthorizedException
+      ) {
+        throw uploadError;
+      }
+      throw new InternalServerErrorException('Failed to upload avatar');
     }
   }
 }

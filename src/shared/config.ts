@@ -2,12 +2,23 @@ import { plainToInstance } from 'class-transformer';
 import { IsString, validateSync } from 'class-validator';
 import fs from 'fs';
 import path from 'path';
+import dotenv from 'dotenv';
 
 // const envPath = path.resolve(process.cwd(), '.env');
 
-if (!fs.existsSync(path.resolve('.env'))) {
-  console.error('No .env file found');
-  process.exit(1);
+// if (!fs.existsSync(path.resolve('.env.production'))) {
+//   console.error('No .env file found');
+//   process.exit(1);
+// }
+
+if (process.env.NODE_ENV !== 'production') {
+  const envPath = path.resolve(process.cwd(), '.env.production');
+  if (fs.existsSync(envPath)) {
+    dotenv.config({ path: envPath });
+    console.log(`Loaded env from ${envPath}`);
+  } else {
+    console.warn('No .env.production file found (running without local env)');
+  }
 }
 
 class ConfigSchema {
@@ -23,6 +34,14 @@ class ConfigSchema {
   REFRESH_TOKEN_EXPIRES_IN: string;
   @IsString()
   SECRET_API_KEY: string;
+  @IsString()
+  AWS_REGION: string;
+  @IsString()
+  AWS_ACCESS_KEY_ID: string;
+  @IsString()
+  AWS_SECRET_ACCESS_KEY: string;
+  @IsString()
+  AWS_S3_BUCKET_NAME: string;
 }
 
 const configServer = plainToInstance(ConfigSchema, process.env, {

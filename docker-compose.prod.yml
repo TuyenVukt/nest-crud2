@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nestjs/crud:latest 
+    container_name: nestjs_api
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    # environment:
+    #   NODE_ENV: production
+    volumes:
+      - uploads:/usr/src/app/uploads
+      - post_cover:/usr/src/app/post-cover
+    command: >
+      sh -c "npx prisma migrate deploy && node dist/main.js"
+
+volumes:
+  uploads:
+  post_cover:
+  
