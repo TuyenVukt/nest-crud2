@@ -1,5 +1,5 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:ap-northeast-1:690353060208:task-definition/nest-crud-definition:13",
+    "taskDefinitionArn": "arn:aws:ecs:ap-northeast-1:690353060208:task-definition/nest-crud-definition:14",
     "containerDefinitions": [
         {
             "name": "v1",
