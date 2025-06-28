@@ -46,7 +46,7 @@ COPY --from=build /usr/src/app/package*.json ./
 COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --from=build /usr/src/app/prisma ./prisma
 COPY --from=build /usr/src/app/dist ./dist
-COPY --from=build /usr/src/app/.env.production .env.production
+# COPY --from=build /usr/src/app/.env.production .env.production
 # COPY --from=build /usr/src/app/.env .env
 
 # Set env
