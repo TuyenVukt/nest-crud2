@@ -1,5 +1,5 @@
 import { Exclude } from 'class-transformer';
-import { IsEmail, IsString, Length } from 'class-validator';
+import { IsEmail, IsString, Length, IsOptional } from 'class-validator';
 import { Match } from 'src/shared/decorators/custom-validator.decorator';
 // import { SuccessResDTO } from 'src/shared/shared.dto';
 
@@ -57,6 +57,29 @@ export class LogoutResDto {
   constructor(partial: Partial<LogoutResDto>) {
     Object.assign(this, partial);
   }
+}
+
+export class ProfileResDto {
+  id: number;
+  email: string;
+  name: string;
+  avatarUrl: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+
+  constructor(partial: Partial<ProfileResDto>) {
+    Object.assign(this, partial);
+  }
+}
+
+export class UpdateProfileDto {
+  @IsString()
+  @IsOptional()
+  name?: string;
+
+  @IsEmail()
+  @IsOptional()
+  email?: string;
 }
 
 // export class RegisterData {

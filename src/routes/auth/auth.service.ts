@@ -210,4 +210,85 @@ export class AuthService {
       throw new InternalServerErrorException('Failed to upload avatar');
     }
   }
+
+  async getProfile(userId: number) {
+    try {
+      const user = await this.prismaService.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      return user;
+    } catch (error) {
+      if (isNotFoundPrismaError(error)) {
+        throw new UnauthorizedException('User not found');
+      }
+      throw error;
+    }
+  }
+
+  async updateProfile(
+    userId: number,
+    updateData: { name?: string; email?: string },
+  ) {
+    try {
+      // Check if user exists
+      const existingUser = await this.prismaService.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!existingUser) {
+        throw new UnauthorizedException('User not found');
+      }
+
+      // Check if email is being updated and if it's already taken by another user
+      if (updateData.email && updateData.email !== existingUser.email) {
+        const emailExists = await this.prismaService.user.findUnique({
+          where: { email: updateData.email },
+        });
+
+        if (emailExists) {
+          throw new ConflictException('Email already exists');
+        }
+      }
+
+      // Update user profile
+      const updatedUser = await this.prismaService.user.update({
+        where: { id: userId },
+        data: {
+          ...(updateData.name && { name: updateData.name }),
+          ...(updateData.email && { email: updateData.email }),
+        },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          avatarUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return updatedUser;
+    } catch (error) {
+      if (isUniqueConstraintPrismaError(error)) {
+        throw new ConflictException('Email already exists');
+      }
+      if (isNotFoundPrismaError(error)) {
+        throw new UnauthorizedException('User not found');
+      }
+      throw error;
+    }
+  }
 }

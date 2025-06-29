@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Put,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -20,10 +21,12 @@ import {
   LoginResDto,
   LogoutDto,
   LogoutResDto,
+  ProfileResDto,
   RefreshTokenDto,
   RefreshTokenResDto,
   RegisterDto,
   RegisterResDto,
+  UpdateProfileDto,
 } from './dto/register.dto';
 import { AccessTokenGuard } from 'src/shared/guards/access-token.guard';
 import { ActiveUser } from 'src/shared/decorators/active-user.decorator';
@@ -75,5 +78,24 @@ export class AuthController {
     }
 
     return await this.authService.uploadAvatar(userId, file);
+  }
+
+  @Get('profile')
+  @UseGuards(AccessTokenGuard)
+  async getProfile(
+    @ActiveUser('userId') userId: number,
+  ): Promise<ProfileResDto> {
+    return new ProfileResDto(await this.authService.getProfile(userId));
+  }
+
+  @Put('profile')
+  @UseGuards(AccessTokenGuard)
+  async updateProfile(
+    @ActiveUser('userId') userId: number,
+    @Body() updateData: UpdateProfileDto,
+  ): Promise<ProfileResDto> {
+    return new ProfileResDto(
+      await this.authService.updateProfile(userId, updateData),
+    );
   }
 }
