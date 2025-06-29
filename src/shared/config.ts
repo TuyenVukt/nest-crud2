@@ -12,12 +12,12 @@ import dotenv from 'dotenv';
 // }
 
 if (process.env.NODE_ENV !== 'production') {
-  const envPath = path.resolve(process.cwd(), '.env.production');
+  const envPath = path.resolve(process.cwd(), '.env');
   if (fs.existsSync(envPath)) {
     dotenv.config({ path: envPath });
     console.log(`Loaded env from ${envPath}`);
   } else {
-    console.warn('No .env.production file found (running without local env)');
+    console.warn('No .env file found (running without local env)');
   }
 }
 
